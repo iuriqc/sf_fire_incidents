@@ -8,6 +8,11 @@ output "private_subnet_ids" {
   value       = aws_subnet.private[*].id
 }
 
+output "public_subnet_ids" {
+  description = "Public subnet IDs for Redshift/EMR"
+  value       = aws_subnet.public[*].id
+}
+
 output "vpc_cidr_block" {
   description = "VPC CIDR for security group rules"
   value       = aws_vpc.main.cidr_block
