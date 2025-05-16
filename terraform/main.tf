@@ -49,3 +49,19 @@ module "warehouse" {
 
   depends_on = [module.networking]
 }
+
+resource "aws_budgets_budget" "monthly" {
+  name         = "sf-fire-${var.environment}-monthly"
+  budget_type  = "COST"
+  limit_amount = "50"
+  limit_unit   = "USD"
+  time_unit    = "MONTHLY"
+
+  notification {
+    threshold_type             = "PERCENTAGE"
+    comparison_operator        = "GREATER_THAN"
+    threshold                  = 50
+    notification_type          = "FORECASTED"
+    subscriber_email_addresses = ["iuriqc@hotmail.com"]
+  }
+}
