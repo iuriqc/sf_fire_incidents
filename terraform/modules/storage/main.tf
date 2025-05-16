@@ -1,27 +1,52 @@
 resource "aws_s3_bucket" "data" {
   bucket = "sf-fire-${var.environment}-data"
-  acl    = "private"
+}
+resource "aws_s3_bucket_lifecycle_configuration" "data_lifecycle" {
+  bucket = aws_s3_bucket.data.id
 
-  lifecycle_rule {
-    id      = "auto-tiering"
-    status  = "Enabled"
+  rule {
+    id     = "auto-tiering"
+    status = "Enabled"
 
     transition {
       days          = 30
       storage_class = "INTELLIGENT_TIERING"
     }
   }
+}
 
-  server_side_encryption_configuration {
-    rule {
-      apply_server_side_encryption_by_default {
-        sse_algorithm = "AES256"
-      }
+resource "aws_s3_bucket_server_side_encryption_configuration" "data_encryption" {
+  bucket = aws_s3_bucket.data.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
     }
   }
 }
 
+resource "aws_s3_bucket_ownership_controls" "data_ownership" {
+  bucket = aws_s3_bucket.data.id
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
+}
+
+resource "aws_s3_bucket_acl" "data_acl" {
+  depends_on = [aws_s3_bucket_ownership_controls.data_ownership]
+  bucket = aws_s3_bucket.data.id
+  acl    = "private"
+}
+
+resource "aws_s3_bucket_versioning" "data_versioning" {
+  bucket = aws_s3_bucket.data.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
 resource "aws_dynamodb_table" "etl_metadata" {
+  count          = var.enable_dynamodb ? 1 : 0
   name           = "sf-fire-${var.environment}-metadata"
   billing_mode   = "PAY_PER_REQUEST"
   hash_key       = "JobId"
