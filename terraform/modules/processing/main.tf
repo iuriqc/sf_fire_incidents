@@ -16,10 +16,13 @@ resource "aws_glue_crawler" "fire_incidents" {
 }
 
 resource "aws_emr_cluster" "fire_etl" {
+  count         = var.enable_emr ? 1 : 0
   name          = "sf-fire-${var.environment}-etl"
   release_label = "emr-6.4.0"
   applications  = ["Spark"]
   log_uri       = "s3://${var.s3_bucket_name}/logs/"
+
+  service_role = aws_iam_role.emr_service_role[0].arn
 
   ec2_attributes {
     subnet_id                         = var.subnet_ids[0]
