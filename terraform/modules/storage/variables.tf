@@ -1,7 +1,6 @@
 variable "environment" {
   description = "Deployment environment prefix"
   type        = string
-  default     = "dev"
 
   validation {
     condition     = contains(["dev", "hml", "prod"], var.environment)
