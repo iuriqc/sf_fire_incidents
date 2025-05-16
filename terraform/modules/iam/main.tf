@@ -2,7 +2,7 @@ resource "aws_iam_role" "glue_role" {
   name = "${var.role_name_prefix}-${var.environment}-glue-role"
 
   assume_role_policy = jsonencode({
-    Version = "2025-05-16"
+    Version = "2012-10-17"
     Statement = [
       {
         Action = "sts:AssumeRole"
@@ -25,7 +25,7 @@ resource "aws_iam_role" "emr_service_role" {
   name = "${var.role_name_prefix}-${var.environment}-emr-service"
 
   assume_role_policy = jsonencode({
-    Version = "2025-05-16"
+    Version = "2012-10-17"
     Statement = [
       {
         Action = "sts:AssumeRole"
@@ -49,7 +49,7 @@ resource "aws_iam_role" "emr_ec2_role" {
   name = "${var.role_name_prefix}-${var.environment}-emr-ec2"
 
   assume_role_policy = jsonencode({
-    Version = "2025-05-16"
+    Version = "2012-10-17"
     Statement = [
       {
         Action = "sts:AssumeRole"
