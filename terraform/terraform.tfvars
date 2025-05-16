@@ -1,3 +1,3 @@
 environment       = "dev"
-aws_region        = "us-west-2"
+aws_region        = "us-east-1"
 redshift_password = var.redshift_password
