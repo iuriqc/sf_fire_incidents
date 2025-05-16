@@ -15,6 +15,25 @@ resource "aws_glue_crawler" "fire_incidents" {
   })
 }
 
+resource "aws_security_group" "emr" {
+  name_prefix = "sf-fire-${var.environment}-emr-"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["10.0.0.0/16"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
 resource "aws_emr_cluster" "fire_etl" {
   count         = var.enable_emr ? 1 : 0
   name          = "sf-fire-${var.environment}-etl"
@@ -22,13 +41,13 @@ resource "aws_emr_cluster" "fire_etl" {
   applications  = ["Spark"]
   log_uri       = "s3://${var.s3_bucket_name}/logs/"
 
-  service_role = aws_iam_role.emr_service_role[0].arn
+  service_role = var.emr_service_role_arn
 
   ec2_attributes {
-    subnet_id                         = var.subnet_ids[0]
+    subnet_id                         = var.subnet_id
     emr_managed_master_security_group = aws_security_group.emr.id
-    emr_managed_slave_security_group = aws_security_group.emr.id
-    instance_profile                  = aws_iam_instance_profile.emr.arn
+    emr_managed_slave_security_group  = aws_security_group.emr.id
+    instance_profile                  = var.emr_instance_profile_arn
   }
 
   master_instance_group {

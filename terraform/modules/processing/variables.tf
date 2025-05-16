@@ -13,6 +13,16 @@ variable "glue_role_arn" {
   type        = string
 }
 
+variable "emr_service_role_arn" {
+  description = "IAM role ARN for EMR service"
+  type        = string
+}
+
+variable "emr_instance_profile_arn" {
+  description = "IAM instance profile ARN for EMR"
+  type        = string
+}
+
 variable "s3_bucket_name" {
   description = "S3 bucket name for data storage"
   type        = string

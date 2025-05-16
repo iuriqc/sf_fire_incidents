@@ -5,7 +5,7 @@ output "glue_crawler_name" {
 
 output "emr_cluster_id" {
   description = "EMR cluster ID (if enabled)"
-  value       = var.enable_emr ? aws_emr_cluster.fire_etl.id : null
+  value       = var.enable_emr ? aws_emr_cluster.fire_etl[0].id : null
 }
 
 output "glue_database_name" {
