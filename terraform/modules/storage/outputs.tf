@@ -5,7 +5,7 @@ output "data_bucket_name" {
 
 output "dynamodb_table_name" {
   description = "DynamoDB table for job metadata"
-  value       = var.enable_dynamodb ? aws_dynamodb_table.etl_metadata[0].name : null
+  value       = aws_dynamodb_table.etl_metadata.name
 }
 
 output "bucket_arn" {

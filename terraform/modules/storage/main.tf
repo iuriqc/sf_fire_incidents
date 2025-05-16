@@ -8,6 +8,10 @@ resource "aws_s3_bucket_lifecycle_configuration" "data_lifecycle" {
     id     = "auto-tiering"
     status = "Enabled"
 
+    filter {
+      prefix = ""
+    }
+
     transition {
       days          = 30
       storage_class = "INTELLIGENT_TIERING"
