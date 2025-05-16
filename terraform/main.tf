@@ -43,7 +43,7 @@ module "warehouse" {
   vpc_id            = module.networking.vpc_id
   subnet_ids        = module.networking.private_subnet_ids
   redshift_password = var.redshift_password
-  s3_bucket_name    = module.storage.data_bucket_name 
+  s3_bucket_name    = module.storage.data_bucket_name
 
   depends_on = [module.networking]
 }

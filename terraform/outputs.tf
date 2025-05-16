@@ -5,7 +5,7 @@ output "s3_data_bucket" {
 
 output "redshift_connection" {
   description = "Redshift connection details"
-  value       = {
+  value = {
     endpoint = module.warehouse.redshift_endpoint
     jdbc_url = module.warehouse.redshift_jdbc_url
     database = "fireincidents"
