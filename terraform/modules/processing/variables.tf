@@ -23,3 +23,13 @@ variable "enable_emr" {
   type        = bool
   default     = false
 }
+
+variable "subnet_id" {
+  description = "Subnet ID for EMR cluster"
+  type        = string
+}
+
+variable "vpc_id" {
+  description = "VPC ID for security group creation"
+  type        = string
+}
