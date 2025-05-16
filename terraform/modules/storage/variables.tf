@@ -1,6 +1,7 @@
 variable "environment" {
   description = "Deployment environment prefix"
   type        = string
+  default     = "dev"
 }
 
 variable "enable_dynamodb" {
