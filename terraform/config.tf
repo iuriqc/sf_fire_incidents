@@ -1,5 +1,5 @@
 locals {
   config = {
-    action = "apply" # "apply" or "destroy"
+    action = "destroy" # "apply" or "destroy"
   }
 }
