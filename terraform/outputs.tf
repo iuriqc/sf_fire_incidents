@@ -17,3 +17,7 @@ output "glue_crawler_status" {
   description = "Glue crawler activation command"
   value       = "aws glue start-crawler --name ${module.processing.glue_crawler_name}"
 }
+
+output "config_action" {
+  value = local.config.action
+}

@@ -12,8 +12,18 @@ permissions:
 jobs:
   terraform:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./terraform
+
     steps:
       - uses: actions/checkout@v3
+
+      - name: Read terraform config
+        id: terraform-config
+        run: |
+          action=$(terraform output -raw config_action 2>/dev/null || echo "apply")
+          echo "action=$action" >> $GITHUB_OUTPUT
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -24,9 +34,17 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
 
+      - name: Terraform Init
+        run: terraform init
+
       - name: Terraform Apply
+        if: steps.terraform-config.outputs.action == 'apply'
         env:
           TF_VAR_redshift_password: ${{ secrets.REDSHIFT_PASSWORD }}
-        run: |
-          terraform init
-          terraform apply -auto-approve
+        run: terraform apply -auto-approve
+      
+      - name: Terraform Destroy
+        if: steps.terraform-config.outputs.action == 'destroy'
+        env:
+          TF_VAR_redshift_password: ${{ secrets.REDSHIFT_PASSWORD }}
+        run: terraform destroy -auto-approve
