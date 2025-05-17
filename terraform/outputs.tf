@@ -18,6 +18,10 @@ output "glue_crawler_status" {
   value       = "aws glue start-crawler --name ${module.processing.glue_crawler_name}"
 }
 
+locals {
+  config = jsondecode(file("${path.module}/terraform.conf"))
+}
+
 output "config_action" {
   value = local.config.action
 }

@@ -19,11 +19,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Read terraform config
-        id: terraform-config
+      - name: Get terraform Action
+        id: get-action
         run: |
-          action=$(terraform output -raw config_action 2>/dev/null || echo "apply")
-          echo "action=$action" >> $GITHUB_OUTPUT
+          ACTION=$(jq -r '.action' terraform.conf)
+          echo "action=$ACTION" >> $GITHUB_OUTPUT
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -38,13 +38,13 @@ jobs:
         run: terraform init
 
       - name: Terraform Apply
-        if: steps.terraform-config.outputs.action == 'apply'
+        if: steps.get-action.outputs.action == 'apply'
         env:
           TF_VAR_redshift_password: ${{ secrets.REDSHIFT_PASSWORD }}
         run: terraform apply -auto-approve
       
       - name: Terraform Destroy
-        if: steps.terraform-config.outputs.action == 'destroy'
+        if: steps.get-action.outputs.action == 'destroy'
         env:
           TF_VAR_redshift_password: ${{ secrets.REDSHIFT_PASSWORD }}
         run: terraform destroy -auto-approve
