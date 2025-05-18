@@ -7,10 +7,10 @@ terraform {
   }
 
   backend "s3" {
-    bucket         = "sf-fire-tfstate"
-    key            = "terraform.tfstate"
-    region         = "us-east-1"
-    dynamodb_table = "sf-fire-tfstate-lock"
+    bucket       = "sf-fire-tfstate"
+    key          = "terraform.tfstate"
+    region       = "us-east-1"
+    use_lockfile = true
   }
 }
 
