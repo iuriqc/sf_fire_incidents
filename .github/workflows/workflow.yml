@@ -35,15 +35,22 @@ jobs:
         uses: hashicorp/setup-terraform@v2
 
       - name: Terraform Init
-        run: terraform init -reconfigure
+        run: |
+          terraform init \
+            -backend=true \
+            -backend-config="bucket=sf-fire-tfstate" \
+            -backend-config="key=terraform.tfstate" \
+            -backend-config="region=${{ secrets.AWS_REGION }}" \
+            -backend-config="dynamodb_table=sf-fire-tfstate-lock" \
+            -reconfigure
       
       - name: Terraform Plan and Apply
         if: steps.get-action.outputs.action == 'apply'
         env:
           TF_VAR_redshift_password: ${{ secrets.REDSHIFT_PASSWORD }}
         run: |
-          terraform plan -input=false -refresh=true -out=tfplan || true
-          terraform apply tfplan || true
+          terraform plan -refresh=true -out=tfplan
+          terraform apply tfplan
       
       - name: Terraform Destroy
         if: steps.get-action.outputs.action == 'destroy'
