@@ -35,13 +35,7 @@ jobs:
         uses: hashicorp/setup-terraform@v2
 
       - name: Terraform Init
-        run: terraform init
-      
-      - name: Terraform State Refresh
-        run: terraform refresh
-        env:
-          TF_VAR_redshift_password: ${{ secrets.REDSHIFT_PASSWORD }}
-        continue-on-error: true
+        run: terraform init -reconfigure
       
       - name: Terraform Plan and Apply
         if: steps.get-action.outputs.action == 'apply'
@@ -49,7 +43,7 @@ jobs:
           TF_VAR_redshift_password: ${{ secrets.REDSHIFT_PASSWORD }}
         run: |
           terraform plan -input=false -refresh=true -out=tfplan || true
-          terraform apply -auto-approve tfplan || true
+          terraform apply tfplan || true
       
       - name: Terraform Destroy
         if: steps.get-action.outputs.action == 'destroy'
