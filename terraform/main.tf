@@ -36,7 +36,7 @@ module "processing" {
   subnet_id                = module.networking.private_subnet_ids[0]
   vpc_id                   = module.networking.vpc_id
 
-  depends_on = [module.storage, module.iam]
+  depends_on = [module.networking, module.storage, module.iam]
 }
 
 module "warehouse" {

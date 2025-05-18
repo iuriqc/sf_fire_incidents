@@ -49,7 +49,6 @@ jobs:
           TF_VAR_redshift_password: ${{ secrets.REDSHIFT_PASSWORD }}
         run: |
           terraform plan -input=false -refresh=true -out=tfplan || true
-          terraform apply -auto-approve -refresh-only || true
           terraform apply -auto-approve tfplan || true
       
       - name: Terraform Destroy
