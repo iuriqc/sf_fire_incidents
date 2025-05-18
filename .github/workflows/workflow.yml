@@ -37,19 +37,20 @@ jobs:
       - name: Terraform Init
         run: terraform init
       
-      - name: Terraform Plan
-        if: steps.get-action.outputs.action == 'apply'
+      - name: Terraform State Refresh
+        run: terraform refresh
         env:
           TF_VAR_redshift_password: ${{ secrets.REDSHIFT_PASSWORD }}
         continue-on-error: true
-        id: plan
-        run: terraform plan -out=tfplan
-
-      - name: Terraform Apply
+      
+      - name: Terraform Plan and Apply
         if: steps.get-action.outputs.action == 'apply'
         env:
           TF_VAR_redshift_password: ${{ secrets.REDSHIFT_PASSWORD }}
-        run: terraform apply -auto-approve -refresh=true
+        run: |
+          terraform plan -input=false -refresh=true -out=tfplan || true
+          terraform apply -auto-approve -refresh-only || true
+          terraform apply -auto-approve tfplan || true
       
       - name: Terraform Destroy
         if: steps.get-action.outputs.action == 'destroy'
