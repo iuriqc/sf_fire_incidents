@@ -1,0 +1,61 @@
+name: 'Terraform CI/CD'
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./terraform
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Get terraform Action
+        id: get-action
+        run: |
+          ACTION=$(jq -r '.action' terraform.conf)
+          echo "action=$ACTION" >> $GITHUB_OUTPUT
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend=true \
+            -backend-config="bucket=sf-fire-tfstate" \
+            -backend-config="key=terraform.tfstate" \
+            -backend-config="region=${{ secrets.AWS_REGION }}" \
+            -backend-config="use_lockfile=true" \
+            -reconfigure
+      
+      - name: Terraform Plan and Apply
+        if: steps.get-action.outputs.action == 'apply'
+        env:
+          TF_VAR_redshift_password: ${{ secrets.REDSHIFT_PASSWORD }}
+        run: |
+          terraform plan -refresh=true -out=tfplan
+          terraform apply tfplan
+      
+      - name: Terraform Plan and Destroy
+        if: steps.get-action.outputs.action == 'destroy'
+        env:
+          TF_VAR_redshift_password: ${{ secrets.REDSHIFT_PASSWORD }}
+        run: |
+          terraform plan -destroy -out=tfplan
+          terraform apply tfplan
