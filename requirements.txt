@@ -4,3 +4,6 @@ pyarrow
 boto3
 python-dotenv
 pytest
+matplotlib
+seaborn
+jupyter
