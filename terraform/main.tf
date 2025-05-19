@@ -54,7 +54,7 @@ module "warehouse" {
   redshift_password = var.redshift_password
   s3_bucket_name    = module.storage.data_bucket_name
 
-  depends_on = [module.networking]
+  depends_on = [module.networking, module.storage]
 }
 
 resource "aws_budgets_budget" "monthly" {
