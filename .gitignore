@@ -181,3 +181,7 @@ tfplan
 
 # AWS Glue
 aws-glue-libs/
+
+# DBT
+package-lock.yml
+dbt_packages/
