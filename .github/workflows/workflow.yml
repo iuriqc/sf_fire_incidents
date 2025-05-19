@@ -52,8 +52,10 @@ jobs:
           terraform plan -refresh=true -out=tfplan
           terraform apply tfplan
       
-      - name: Terraform Destroy
+      - name: Terraform Plan and Destroy
         if: steps.get-action.outputs.action == 'destroy'
         env:
           TF_VAR_redshift_password: ${{ secrets.REDSHIFT_PASSWORD }}
-        run: terraform destroy -auto-approve
+        run: |
+          terraform plan -destroy -out=tfplan
+          terraform apply tfplan
