@@ -50,7 +50,7 @@ module "warehouse" {
   source            = "./modules/warehouse"
   environment       = var.environment
   vpc_id            = module.networking.vpc_id
-  subnet_ids        = module.networking.private_subnet_ids
+  subnet_ids        = module.networking.public_subnet_ids
   redshift_password = var.redshift_password
   s3_bucket_name    = module.storage.data_bucket_name
 

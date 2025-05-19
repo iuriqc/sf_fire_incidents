@@ -11,7 +11,7 @@ resource "aws_security_group" "redshift" {
     from_port   = 5439
     to_port     = 5439
     protocol    = "tcp"
-    cidr_blocks = ["10.0.0.0/16"]
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
@@ -31,7 +31,7 @@ resource "aws_redshift_cluster" "fire_warehouse" {
   cluster_type        = "single-node"
   number_of_nodes     = var.redshift_nodes
   
-  publicly_accessible = false
+  publicly_accessible = true
   skip_final_snapshot    = true
   automated_snapshot_retention_period = 1
 
