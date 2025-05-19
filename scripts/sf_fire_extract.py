@@ -13,7 +13,6 @@ def get_job_args():
         from awsglue.utils import getResolvedOptions
         args = getResolvedOptions(sys.argv, ['OUTPUT_S3_PATH', 'SOCRATA_APP_TOKEN'])
     except ImportError:
-        # Local development fallback
         args = {}
         for i in range(1, len(sys.argv), 2):
             if sys.argv[i].startswith('--'):
@@ -31,7 +30,7 @@ app_token = args['SOCRATA_APP_TOKEN']
 
 # API Configuration
 SOCRATA_ENDPOINT = "https://data.sfgov.org/resource/wr8u-xric.json"
-BATCH_SIZE = 50000  # Records per API call
+BATCH_SIZE = 50000
 
 def fetch_data(offset=0, limit=BATCH_SIZE):
     """Fetch data from Socrata API with pagination"""
