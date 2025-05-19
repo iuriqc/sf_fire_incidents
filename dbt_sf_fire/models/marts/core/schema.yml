@@ -1,0 +1,50 @@
+version: 2
+
+models:
+  - name: fact_fire_incidents
+    description: "Fact table for fire incident metrics"
+    columns:
+      - name: incident_number
+        description: "Unique identifier for each incident"
+        tests:
+          - not_null
+      - name: incident_date
+        description: "Date and time when incident occurred"
+        tests:
+          - not_null
+      - name: battalion_code
+        description: "Battalion responding to the incident"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_battalion')
+              field: battalion_code
+
+  - name: dim_battalion
+    description: "Dimension table for fire battalions"
+    columns:
+      - name: battalion_code
+        description: "Unique battalion identifier (e.g., B01)"
+        tests:
+          - unique
+          - not_null
+      - name: total_incidents
+        description: "Total incidents responded to by this battalion"
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+  - name: dim_time
+    description: "Time dimension table for analytics"
+    columns:
+      - name: date_id
+        description: "Date in YYYY-MM-DD format"
+        tests:
+          - unique
+          - not_null
+      - name: month_name
+        description: "Full month name (e.g., January)"
+        tests:
+          - accepted_values:
+              values: ['January', 'February', 'March', 'April', 'May', 'June', 
+                      'July', 'August', 'September', 'October', 'November', 'December']
