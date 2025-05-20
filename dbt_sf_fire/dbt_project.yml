@@ -16,6 +16,9 @@ clean-targets:
 models:
   sf_fire_incidents:
     staging:
+      load:
+        +materialized: table
+        +schema: raw
       +materialized: view
       +schema: staging
     marts:

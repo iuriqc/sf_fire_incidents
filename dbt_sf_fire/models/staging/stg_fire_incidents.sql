@@ -26,4 +26,4 @@ SELECT
     DATE_TRUNC('month', CAST(incident_date AS TIMESTAMP)) as incident_date_month,
     data_loaded_at
 FROM
-    {{ source('raw', 'incidents') }}
+    {{ ref('load_fire_incidents') }}
