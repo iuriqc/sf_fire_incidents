@@ -11,3 +11,16 @@ sources:
         freshness:
           warn_after: {count: 24, period: hour}
           error_after: {count: 48, period: hour}
+        columns:
+          - name: incident_number
+            description: "Unique identifier for the incident"
+            tests:
+              - not_null
+          - name: incident_date
+            description: "Date of the incident"
+            tests:
+              - not_null
+          - name: _processing_date
+            description: "Data processing date"
+            tests:
+              - not_null

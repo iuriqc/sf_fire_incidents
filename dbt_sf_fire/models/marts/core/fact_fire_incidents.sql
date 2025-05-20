@@ -30,7 +30,7 @@ LEFT JOIN
 LEFT JOIN
     {{ ref('dim_district') }} di ON i.supervisor_district = di.district_code
 LEFT JOIN
-    {{ ref('dim_time') }} d ON DATE(i.incident_date) = d.date_id
+    {{ ref('dim_time') }} d ON DATE(i.incident_date) = DATE(d.date_id)
 
 {% if is_incremental() %}
 WHERE i.data_loaded_at > (SELECT MAX(data_loaded_at) FROM {{ this }})
