@@ -5,6 +5,7 @@ import time
 from datetime import datetime
 import boto3
 import io
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 # Get job arguments
 def get_job_args():
@@ -32,6 +33,12 @@ app_token = args['SOCRATA_APP_TOKEN']
 SOCRATA_ENDPOINT = "https://data.sfgov.org/resource/wr8u-xric.json"
 BATCH_SIZE = 50000
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=4, max=10),
+    retry=retry_if_exception_type((requests.exceptions.RequestException, requests.exceptions.Timeout)),
+    before_sleep=lambda retry_state: print(f"Attempt {retry_state.attempt_number} failed. Retrying in {retry_state.seconds_since_start} seconds...")
+)
 def fetch_data(offset=0, limit=BATCH_SIZE):
     """Fetch data from Socrata API with pagination"""
     params = {
@@ -42,7 +49,11 @@ def fetch_data(offset=0, limit=BATCH_SIZE):
     }
     
     try:
-        response = requests.get(SOCRATA_ENDPOINT, params=params)
+        response = requests.get(
+            SOCRATA_ENDPOINT, 
+            params=params,
+            timeout=30
+        )
         response.raise_for_status()
         data = response.json()
     
@@ -52,19 +63,39 @@ def fetch_data(offset=0, limit=BATCH_SIZE):
             print(f"Warning: No data returned for offset {offset}")
             
         return data
-    except Exception as e:
+    except requests.exceptions.Timeout:
+        print(f"Request timed out for offset {offset}")
+        raise
+    except requests.exceptions.RequestException as e:
         print(f"API request failed: {str(e)}")
         print(f"URL: {response.url}")
         raise
+    except Exception as e:
+        print(f"Unexpected error: {str(e)}")
+        raise
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=4, max=10),
+    retry=retry_if_exception_type((requests.exceptions.RequestException, requests.exceptions.Timeout))
+)
 def get_total_records():
     """Get total record count for pagination"""
     params = {
         "$select": "count(*)",
         "$$app_token": app_token
     }
-    response = requests.get(SOCRATA_ENDPOINT, params=params)
-    return int(response.json()[0]["count"])
+    try:
+        response = requests.get(
+            SOCRATA_ENDPOINT, 
+            params=params,
+            timeout=30
+        )
+        response.raise_for_status()
+        return int(response.json()[0]["count"])
+    except Exception as e:
+        print(f"Failed to get total records: {str(e)}")
+        raise
 
 def process_data(data):
     """Process batch of data with Pandas"""
@@ -78,16 +109,48 @@ def save_data(final_df, partition_date):
     parquet_buffer = io.BytesIO()
     final_df.to_parquet(parquet_buffer, index=False)
 
-    # Upload to S3
     s3 = boto3.client('s3')
     bucket = output_path.replace("s3://", "").split("/")[0]
     key = f"raw/fire_incidents/dt={partition_date}/data.parquet"
+
+    # Check if file already exists and save its version id
+    try:
+        old_version = s3.head_object(Bucket=bucket, Key=key).get('VersionId')
+    except s3.exceptions.ClientError:
+        old_version = None
     
-    s3.put_object(
-        Bucket=bucket,
-        Key=key,
-        Body=parquet_buffer.getvalue()
-    )
+    # Upload to S3
+    try:
+        response = s3.put_object(
+            Bucket=bucket,
+            Key=key,
+            Body=parquet_buffer.getvalue()
+        )
+        new_version = response.get('VersionId')
+
+        # Verify data integrity
+        head_response = s3.head_object(Bucket=bucket, Key=key)
+        if head_response['ContentLength'] != len(parquet_buffer.getvalue()):
+            raise Exception("Data integrity check failed - size mismatch")
+            
+        print(f"Successfully saved {len(final_df)} records to {key}")
+
+    except Exception as e:
+        print(f"Failed to upload to S3: {str(e)}")
+
+        # Rollback to previous version if it existed
+        if old_version:
+            try:
+                s3.delete_object(
+                    Bucket=bucket,
+                    Key=key,
+                    VersionId=new_version
+                )
+                print(f"Rolled back to previous version {old_version}")
+            except Exception as rollback_error:
+                print(f"Rollback failed: {str(rollback_error)}")
+
+        raise
 
     print(f"Saved {len(final_df)} records to {key}")
 
