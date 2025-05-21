@@ -5,7 +5,19 @@ import time
 from datetime import datetime
 import boto3
 import io
+import logging
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler('sf_fire_extract.log')
+    ]
+)
+logger = logging.getLogger(__name__)
 
 # Get job arguments
 def get_job_args():
@@ -37,7 +49,7 @@ BATCH_SIZE = 50000
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=4, max=10),
     retry=retry_if_exception_type((requests.exceptions.RequestException, requests.exceptions.Timeout)),
-    before_sleep=lambda retry_state: print(f"Attempt {retry_state.attempt_number} failed. Retrying in {retry_state.seconds_since_start} seconds...")
+    before_sleep=lambda retry_state: logger.error(f"Attempt {retry_state.attempt_number} failed. Retrying in {retry_state.seconds_since_start} seconds...")
 )
 def fetch_data(offset=0, limit=BATCH_SIZE):
     """Fetch data from Socrata API with pagination"""
@@ -57,21 +69,21 @@ def fetch_data(offset=0, limit=BATCH_SIZE):
         response.raise_for_status()
         data = response.json()
     
-        print(f"Fetched {len(data)} records from offset {offset}")
+        logger.info(f"Fetched {len(data)} records from offset {offset}")
 
         if not data:
-            print(f"Warning: No data returned for offset {offset}")
+            logger.warning(f"No data returned for offset {offset}")
             
         return data
     except requests.exceptions.Timeout:
-        print(f"Request timed out for offset {offset}")
+        logger.error(f"Request timed out for offset {offset}")
         raise
     except requests.exceptions.RequestException as e:
-        print(f"API request failed: {str(e)}")
-        print(f"URL: {response.url}")
+        logger.error(f"API request failed: {str(e)}")
+        logger.error(f"URL: {response.url}")
         raise
     except Exception as e:
-        print(f"Unexpected error: {str(e)}")
+        logger.error(f"Unexpected error: {str(e)}")
         raise
 
 @retry(
@@ -94,7 +106,7 @@ def get_total_records():
         response.raise_for_status()
         return int(response.json()[0]["count"])
     except Exception as e:
-        print(f"Failed to get total records: {str(e)}")
+        logger.error(f"Failed to get total records: {str(e)}")
         raise
 
 def process_data(data):
@@ -133,10 +145,10 @@ def save_data(final_df, partition_date):
         if head_response['ContentLength'] != len(parquet_buffer.getvalue()):
             raise Exception("Data integrity check failed - size mismatch")
             
-        print(f"Successfully saved {len(final_df)} records to {key}")
+        logger.info(f"Successfully saved {len(final_df)} records to {key}")
 
     except Exception as e:
-        print(f"Failed to upload to S3: {str(e)}")
+        logger.error(f"Failed to upload to S3: {str(e)}")
 
         # Rollback to previous version if it existed
         if old_version:
@@ -146,47 +158,47 @@ def save_data(final_df, partition_date):
                     Key=key,
                     VersionId=new_version
                 )
-                print(f"Rolled back to previous version {old_version}")
+                logger.info(f"Rolled back to previous version {old_version}")
             except Exception as rollback_error:
-                print(f"Rollback failed: {str(rollback_error)}")
+                logger.error(f"Rollback failed: {str(rollback_error)}")
 
         raise
 
-    print(f"Saved {len(final_df)} records to {key}")
+    logger.info(f"Saved {len(final_df)} records to {key}")
 
 def main():
-    print("Starting SF Fire Incidents data extraction")
+    logger.info("Starting SF Fire Incidents data extraction")
     
     total_records = get_total_records()
-    print(f"Total records to fetch: {total_records}")
+    logger.info(f"Total records to fetch: {total_records}")
     
     processed_records = 0
     partition_date = datetime.now().strftime("%Y-%m-%d")
     all_dfs = []
     
     while processed_records < total_records:
-        print(f"\nFetching batch starting at offset: {processed_records}")
+        logger.info(f"Fetching batch starting at offset: {processed_records}")
         batch = fetch_data(offset=processed_records)
         
         if not batch:
-            print("No more records to fetch")
+            logger.info("No more records to fetch")
             break
             
         df = process_data(batch)
         all_dfs.append(df)
 
         processed_records += len(df)
-        print(f"Processed {processed_records}/{total_records} records ({(processed_records/total_records)*100:.2f}%)")
+        logger.info(f"Processed {processed_records}/{total_records} records ({(processed_records/total_records)*100:.2f}%)")
         time.sleep(1)
     
     if processed_records < total_records:
-        print(f"Warning: Only processed {processed_records} out of {total_records} records")
+        logger.warning(f"Only processed {processed_records} out of {total_records} records")
     
     if all_dfs:
         final_df = pd.concat(all_dfs, ignore_index=True)
         save_data(final_df, partition_date)
 
-    print(f"Job completed. Total records processed: {processed_records}")
+    logger.info(f"Job completed. Total records processed: {processed_records}")
 
 if __name__ == "__main__":
     main()
