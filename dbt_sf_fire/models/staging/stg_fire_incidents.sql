@@ -5,6 +5,7 @@
 }}
 
 SELECT
+    id,
     incident_number,
     CAST(incident_date AS TIMESTAMP) as incident_date,
     address,
