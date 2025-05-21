@@ -1,11 +1,82 @@
 {{
   config(
-    materialized='table',
-    schema='raw'
+    materialized='incremental',
+    schema='raw',
+    unique_key='id'
   )
 }}
 
-{% set create_sql %}
+{%- set columns %}
+    incident_number,
+    exposure_number,
+    id,
+    address,
+    incident_date,
+    call_number,
+    alarm_dttm,
+    arrival_dttm,
+    close_dttm,
+    city,
+    zipcode,
+    battalion,
+    station_area,
+    box,
+    suppression_units,
+    suppression_personnel,
+    ems_units,
+    ems_personnel,
+    other_units,
+    other_personnel,
+    fire_fatalities,
+    fire_injuries,
+    civilian_fatalities,
+    civilian_injuries,
+    number_of_alarms,
+    primary_situation,
+    mutual_aid,
+    action_taken_primary,
+    property_use,
+    supervisor_district,
+    neighborhood_district,
+    point,
+    data_as_of,
+    data_loaded_at,
+    action_taken_secondary,
+    area_of_fire_origin,
+    ignition_cause,
+    ignition_factor_primary,
+    heat_source,
+    item_first_ignited,
+    human_factors_associated_with_ignition,
+    estimated_property_loss,
+    detector_alerted_occupants,
+    structure_type,
+    no_flame_spread,
+    detectors_present,
+    detector_type,
+    detector_operation,
+    detector_effectiveness,
+    automatic_extinguishing_system_present,
+    estimated_contents_loss,
+    structure_status,
+    floor_of_fire_origin,
+    automatic_extinguishing_sytem_type,
+    automatic_extinguishing_sytem_perfomance,
+    number_of_sprinkler_heads_operating,
+    action_taken_other,
+    detector_failure_reason,
+    ignition_factor_secondary,
+    automatic_extinguishing_sytem_failure_reason,
+    fire_spread,
+    number_of_floors_with_minimum_damage,
+    number_of_floors_with_significant_damage,
+    number_of_floors_with_heavy_damage,
+    number_of_floors_with_extreme_damage,
+    _processing_date,
+    first_unit_on_scene
+{%- endset %}
+
+{% if not is_incremental() %}
 CREATE TABLE IF NOT EXISTS {{ this }} (
     incident_number VARCHAR(50),
     exposure_number VARCHAR(50),
@@ -74,18 +145,52 @@ CREATE TABLE IF NOT EXISTS {{ this }} (
     number_of_floors_with_extreme_damage VARCHAR(50),
     _processing_date DATE,
     first_unit_on_scene VARCHAR(50)
-)
-{% endset %}
+);
 
-{% do run_query(create_sql) %}
-
-{% set copy_sql %}
-COPY {{ this }}
+COPY {{ this }}  ({{ columns }})
 FROM 's3://{{ env_var("S3_PATH") }}'
 IAM_ROLE '{{ env_var("REDSHIFT_IAM_ROLE") }}'
-FORMAT AS PARQUET SERIALIZETOJSON
-{% endset %}
+FORMAT AS PARQUET SERIALIZETOJSON;
 
-{% do run_query(copy_sql) %}
+{% else %}
+
+BEGIN TRANSACTION;
+
+CREATE TEMPORARY TABLE temp_new_records (LIKE {{ this }});
+
+COPY temp_new_records ({{ columns }})
+FROM 's3://{{ env_var("S3_PATH") }}'
+IAM_ROLE '{{ env_var("REDSHIFT_IAM_ROLE") }}'
+FORMAT AS PARQUET SERIALIZETOJSON;
+
+DELETE FROM temp_new_records 
+WHERE _processing_date <= (SELECT COALESCE(MAX(_processing_date), '1900-01-01'::date) FROM {{ this }});
+
+MERGE INTO {{ this }} target
+USING (
+    SELECT * FROM temp_new_records
+    ) source
+ON target.id = source.id
+WHEN MATCHED THEN 
+    UPDATE SET 
+    {% for column in columns.split(',') %}
+        {{ column.strip() }} = source.{{ column.strip() }}
+        {%- if not loop.last %},{% endif %}
+    {% endfor %}
+WHEN NOT MATCHED THEN
+    INSERT ({{ columns }})
+    VALUES (
+    {% for column in columns.split(',') %}
+        source.{{ column.strip() }}
+        {%- if not loop.last %},{% endif %}
+    {% endfor %}
+    );
+
+DROP TABLE temp_new_records;
+COMMIT;
+{% endif %}
 
 SELECT * FROM {{ this }}
+{% if is_incremental() %}
+WHERE _processing_date > (SELECT MAX(_processing_date) FROM {{ this }})
+{% endif %}
