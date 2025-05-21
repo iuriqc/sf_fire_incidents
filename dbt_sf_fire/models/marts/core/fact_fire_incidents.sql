@@ -2,7 +2,9 @@
   config(
     materialized='incremental',
     unique_key='id',
-    incremental_strategy='merge'
+    incremental_strategy='merge',
+    dist_key='incident_date',
+    sort_keys=['battalion_code', 'district_code']
   )
 }}
 
