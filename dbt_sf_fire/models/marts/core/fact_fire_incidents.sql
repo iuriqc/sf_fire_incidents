@@ -7,6 +7,7 @@
 }}
 
 SELECT
+    i.id,
     i.incident_number,
     i.incident_date,
     i.incident_date_day,
