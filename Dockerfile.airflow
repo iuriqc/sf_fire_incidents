@@ -1,0 +1,22 @@
+FROM apache/airflow:3.0.1
+
+USER root
+
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+USER airflow
+
+# Copy requirements
+COPY aws_requirements.txt .
+RUN pip install --no-cache-dir -r aws_requirements.txt
+
+# Copy DAGs
+COPY dags/ /opt/airflow/dags/
+
+# Set environment variables
+ENV PYTHONPATH=/opt/airflow
