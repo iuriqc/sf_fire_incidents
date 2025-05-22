@@ -13,6 +13,10 @@ on:
       - 'dbt_sf_fire/**'
       - '.github/workflows/s3_sync.yml'
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   s3-sync:
     runs-on: ubuntu-latest
