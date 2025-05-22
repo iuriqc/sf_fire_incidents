@@ -72,3 +72,13 @@ resource "aws_budgets_budget" "monthly" {
     subscriber_email_addresses = ["iuriqc@hotmail.com"]
   }
 }
+
+module "airflow" {
+  source            = "./modules/airflow"
+  environment       = var.environment
+  vpc_id            = module.networking.vpc_id
+  subnet_ids        = module.networking.private_subnet_ids
+  source_bucket_arn = module.storage.bucket_arn
+
+  depends_on = [module.networking, module.storage]
+}

@@ -1,0 +1,62 @@
+name: 'S3 Sync'
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/**'
+      - 'dbt_sf_fire/**'
+      - '.github/workflows/s3_sync.yml'
+  pull_request:
+    paths:
+      - 'scripts/**'
+      - 'dbt_sf_fire/**'
+      - '.github/workflows/s3_sync.yml'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  s3-sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      
+      - name: Check if S3 bucket exists
+        id: check-bucket
+        run: |
+          if aws s3api head-bucket --bucket ${{ secrets.S3_BUCKET }} 2>/dev/null; then
+            echo "bucket_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "bucket_exists=false" >> $GITHUB_OUTPUT
+            echo "Error: S3 bucket ${{ secrets.S3_BUCKET }} does not exist"
+            exit 1
+          fi
+      
+      - name: Check for changes in scripts
+        id: changed-scripts
+        uses: tj-actions/changed-files@v41
+        with:
+          files: scripts/**
+
+      - name: Check for changes in dbt
+        id: changed-dbt
+        uses: tj-actions/changed-files@v41
+        with:
+          files: dbt_sf_fire/**
+
+      - name: Sync scripts to S3
+        if: steps.changed-scripts.outputs.any_changed == 'true'
+        run: aws s3 sync scripts/ s3://${{ secrets.S3_BUCKET }}/scripts/ --delete
+
+      - name: Sync dbt to S3
+        if: steps.changed-dbt.outputs.any_changed == 'true'
+        run: aws s3 sync dbt_sf_fire/ s3://${{ secrets.S3_BUCKET }}/dbt/ --delete

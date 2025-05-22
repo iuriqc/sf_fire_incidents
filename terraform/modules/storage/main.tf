@@ -68,3 +68,17 @@ resource "aws_dynamodb_table" "etl_metadata" {
     type = "S"
   }
 }
+
+resource "aws_s3_object" "requirements" {
+  bucket = aws_s3_bucket.data.id
+  key    = "requirements/aws_requirements.txt"
+  source = "${path.module}/../../../aws_requirements.txt"
+  etag   = filemd5("${path.module}/../../../aws_requirements.txt")
+}
+
+resource "aws_s3_object" "dag" {
+  bucket = aws_s3_bucket.data.id
+  key    = "dags/sf_fire_incidents_etl.py"
+  source = "${path.module}/../../../dags/sf_fire_incidents_etl.py"
+  etag   = filemd5("${path.module}/../../../dags/sf_fire_incidents_etl.py")
+}

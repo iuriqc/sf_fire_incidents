@@ -1,0 +1,6 @@
+dbt-core==1.5.3
+dbt-redshift==1.5.3
+pandas==2.0.3
+requests==2.31.0
+boto3==1.28.0
+tenacity==8.2.2
