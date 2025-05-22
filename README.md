@@ -61,7 +61,7 @@ REDSHIFT_PASSWORD=your_password
 python scripts/run_extract_locally.py
 ```
 
-##### To execute in Glue:
+##### To execute in Glue/MWAA:
 ```bash
 scripts/sf_fire_extract.py
 ```
@@ -101,3 +101,39 @@ dbt test
 - **AWS Credentials**: Ensure AWS credentials are set up correctly. Create a role with the necessary permissions specific for this project.
 - **Terraform**: Ensure your Terraform configuration is correct and up-to-date. Attempt to create the infrastructure using `terraform init` and `terraform apply`.
 - **dbt**: Check your dbt configuration and ensure the necessary dependencies are installed.
+
+### Docker Setup Alternative
+If you prefer to use Docker, follow these steps to set up the project:
+
+1. Build and run locally:
+```bash
+docker-compose build
+
+docker-compose up -d postgres
+
+docker-compose run airflow-webserver airflow db init
+docker-compose run airflow-webserver airflow users create \
+    --username admin \
+    --firstname Admin \
+    --lastname User \
+    --role Admin \
+    --email your-email@example.com \
+    --password admin
+
+docker-compose up -d
+
+docker-compose down
+```
+
+2. Run ETL script in container:
+```bash
+docker build -t sf-fire-etl -f Dockerfile.etl .
+docker run -it --env-file .env sf-fire-etl
+```
+
+3. To run in AWS:
+```bash
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $AWS_ACCOUNT.dkr.ecr.us-east-1.amazonaws.com
+docker tag sf-fire-airflow:latest $AWS_ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/sf-fire-airflow:latest
+docker push $AWS_ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/sf-fire-airflow:latest
+```
