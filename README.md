@@ -92,7 +92,7 @@ dbt test
 - `incidents_by_district`: response district performance
 - `incidents_by_battalion`: response unit performance
 
-## Testing
+## 🧪 Testing
 - Data quality tests in dbt
 - Unit tests for Python scripts
 - Infrastructure tests with Terraform
