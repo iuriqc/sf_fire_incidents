@@ -1,10 +1,9 @@
 from datetime import timedelta
 from airflow import DAG
 from airflow.utils.dates import days_ago
-from airflow.operators.python import PythonOperator
 from airflow.operators.dummy import DummyOperator
+from airflow.providers.amazon.aws.operators.glue import GlueJobOperator
 from airflow.providers.amazon.aws.operators.dbt import DbtRunOperator, DbtTestOperator
-import boto3
 import logging
 
 logger = logging.getLogger(__name__)
@@ -21,22 +20,6 @@ default_args = {
     'execution_timeout': timedelta(hours=1),
 }
 
-def run_extract_script(**context):
-    """Execute the extraction script"""
-    s3 = boto3.client('s3')
-    bucket_name = context['var'].get('s3_bucket')
-    
-    try:
-        response = s3.get_object(
-            Bucket=bucket_name,
-            Key='scripts/sf_fire_extract.py'
-        )
-        exec(response['Body'].read().decode())
-
-    except Exception as e:
-        logger.error(f"Extract script failed: {str(e)}")
-        raise
-
 # Create DAG
 with DAG(
     'sf_fire_incidents_etl',
@@ -51,10 +34,20 @@ with DAG(
     start = DummyOperator(task_id='start')
     end = DummyOperator(task_id='end')
 
-    extract_task = PythonOperator(
+    extract_task = GlueJobOperator(
         task_id='extract_and_load',
-        python_callable=run_extract_script,
-        provide_context=True
+        job_name='sf_fire_extract_{{ var.value.environment }}',
+        script_location=f"s3://{{ var.value.s3_bucket }}/scripts/sf_fire_extract.py",
+        script_args={
+            '--OUTPUT_S3_PATH': f"s3://{{ var.value.s3_bucket }}/raw/",
+            '--SOCRATA_APP_TOKEN': '{{ var.value.socrata_app_token }}',
+            '--job-language': 'python',
+            '--job-bookmark-option': 'job-bookmark-enable'
+        },
+        aws_conn_id='aws_default',
+        region_name='{{ var.value.aws_region }}',
+        wait_for_completion=True,
+        num_of_dpus=2
     )
 
     dbt_run = DbtRunOperator(

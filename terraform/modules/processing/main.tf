@@ -1,18 +1,25 @@
-resource "aws_glue_crawler" "fire_incidents" {
-  name          = "sf-fire-${var.environment}-crawler"
-  role          = var.glue_role_arn
-  database_name = "fire_incidents"
+resource "aws_glue_job" "sf_fire_extract" {
+  name              = "sf-fire-extract-${var.environment}"
+  role_arn          = var.glue_role_arn
+  glue_version      = "3.0"
+  worker_type       = "G.1X"
+  number_of_workers = 2
 
-  s3_target {
-    path = "s3://${var.s3_bucket_name}/raw/"
+  command {
+    script_location = "s3://${var.s3_bucket_name}/scripts/sf_fire_extract.py"
+    python_version  = "3"
   }
 
-  configuration = jsonencode({
-    CrawlerOutput = {
-      Partitions = { AddOrUpdateBehavior = "InheritFromTable" }
-    }
-    Version = 1
-  })
+  default_arguments = {
+    "--job-language"         = "python"
+    "--continuous-log-logGroup"  = "/aws-glue/jobs/sf-fire-extract"
+    "--enable-job-insights"  = "true"
+    "--job-bookmark-option"  = "job-bookmark-enable"
+  }
+
+  execution_property {
+    max_concurrent_runs = 1
+  }
 }
 
 resource "aws_security_group" "emr" {
