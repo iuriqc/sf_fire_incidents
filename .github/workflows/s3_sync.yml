@@ -6,11 +6,13 @@ on:
     paths:
       - 'scripts/**'
       - 'dbt_sf_fire/**'
+      - 'dags/**'
       - '.github/workflows/s3_sync.yml'
   pull_request:
     paths:
       - 'scripts/**'
       - 'dbt_sf_fire/**'
+      - 'dags/**'
       - '.github/workflows/s3_sync.yml'
 
 permissions:
@@ -23,6 +25,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -52,6 +56,12 @@ jobs:
         uses: tj-actions/changed-files@v41
         with:
           files: dbt_sf_fire/**
+      
+      - name: Check for changes in dags
+        id: changed-dags
+        uses: tj-actions/changed-files@v41
+        with:
+          files: dags/**
 
       - name: Sync scripts to S3
         if: steps.changed-scripts.outputs.any_changed == 'true'
@@ -60,3 +70,7 @@ jobs:
       - name: Sync dbt to S3
         if: steps.changed-dbt.outputs.any_changed == 'true'
         run: aws s3 sync dbt_sf_fire/ s3://${{ secrets.S3_BUCKET }}/dbt/ --delete
+      
+      - name: Sync dags to S3
+        if: steps.changed-dags.outputs.any_changed == 'true'
+        run: aws s3 sync dags/ s3://${{ secrets.S3_BUCKET }}/dags/ --delete
