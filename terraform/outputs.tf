@@ -13,9 +13,9 @@ output "redshift_connection" {
   sensitive = true
 }
 
-output "glue_crawler_status" {
-  description = "Glue crawler activation command"
-  value       = "aws glue start-crawler --name ${module.processing.glue_crawler_name}"
+output "glue_job_status" {
+  description = "Glue job execution command"
+  value       = "aws glue start-job-run --job-name ${module.processing.glue_job_name}"
 }
 
 locals {
