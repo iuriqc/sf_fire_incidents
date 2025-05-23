@@ -1,6 +1,6 @@
-output "glue_crawler_name" {
-  description = "Name of the Glue crawler"
-  value       = aws_glue_crawler.fire_incidents.name
+output "glue_job_name" {
+  description = "Name of the Glue job"
+  value       = aws_glue_job.sf_fire_extract.name
 }
 
 output "emr_cluster_id" {
